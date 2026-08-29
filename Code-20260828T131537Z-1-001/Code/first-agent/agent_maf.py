@@ -1,30 +1,49 @@
-import os
 import asyncio
+import os
+import sys
+
+from agent_framework import Message
+from agent_framework.foundry import FoundryChatClient
+from azure.identity.aio import AzureCliCredential
 from dotenv import load_dotenv
 
-from agent_framework.azure import AzureAIAgentClient
-from azure.identity.aio import AzureCliCredential
 
-load_dotenv(override=True)
+load_dotenv(override=False)
+sys.stdout.reconfigure(encoding="utf-8")
 
 PROMPT = "Tell me a joke about robot pirates."
 
-async def main():
-    project_endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
-    agent_name = os.getenv("AZURE_AI_AGENT_NAME", "first-agent")
 
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(
+async def main():
+    project_endpoint = os.getenv("FOUNDRY_PROJECT_ENDPOINT") or os.getenv("AZURE_AI_PROJECT_ENDPOINT")
+    model = (
+        os.getenv("AZURE_AI_MODEL_DEPLOYMENT_NAME")
+        or os.getenv("FOUNDRY_MODEL_DEPLOYMENT_NAME")
+        or os.getenv("FOUNDRY_MODEL")
+    )
+
+    if not project_endpoint or not model:
+        raise RuntimeError(
+            "Set FOUNDRY_PROJECT_ENDPOINT and AZURE_AI_MODEL_DEPLOYMENT_NAME in your environment or .env file."
+        )
+
+    async with AzureCliCredential() as credential:
+        client = FoundryChatClient(
+            project_endpoint=project_endpoint,
+            model=model,
             credential=credential,
-            endpoint=project_endpoint,
-        ).create_agent(
-            name=agent_name,
-            instructions="You are good at telling jokes. You also translate your answers into Spanish.",
-        ) as agent,
-    ):
-        result = await agent.run(PROMPT)
+        )
+        result = await client.get_response(
+            [
+                Message(
+                    "system",
+                    ["You are good at telling jokes. You also translate your answers into Hindi."],
+                ),
+                Message("user", [PROMPT]),
+            ]
+        )
         print(result.text)
 
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
