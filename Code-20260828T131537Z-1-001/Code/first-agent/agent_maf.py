@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv(override=False)
 sys.stdout.reconfigure(encoding="utf-8")
 
-PROMPT = "Tell me a joke about robot pirates."
+PROMPT = "Tell me a joke"
 
 
 async def main():
